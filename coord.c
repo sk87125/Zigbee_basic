@@ -85,6 +85,9 @@ typedef struct
     uint16 u16RecvCnt;
     uint8  u8Power;
     uint8  u8LastLQI;
+	uint16 u8Temp;
+    uint16 u8Humidity;
+    //char aChar[5];
 } tsAssocNodes;
 
 
@@ -416,6 +419,8 @@ PRIVATE void vProcessIncomingData(MAC_McpsDcfmInd_s *psMcpsInd)
                     led_toggle(LED1);
                     sCoordData.sNode.asAssocNodes[i].u8Power= psFrame->au8Sdu[2];
                     sCoordData.sNode.asAssocNodes[i].u8LastLQI = psFrame->u8LinkQuality;
+					sCoordData.sNode.asAssocNodes[i].u8Temp = psFrame->u8LinkQuality;//ziyi
+					sCoordData.sNode.asAssocNodes[i].u8Humidity = psFrame->u8LinkQuality;//ziyi
                 }
             }
         }
@@ -569,7 +574,9 @@ PRIVATE void vHandleNodeAssociation(MAC_MlmeDcfmInd_s *psMlmeInd)
                 u8AssocStatus = 0;
                 sCoordData.sNode.asAssocNodes[u8NodeInd].u16RecvCnt = 0;
                 sCoordData.sNode.asAssocNodes[u8NodeInd].u8Power = 0;
-                sCoordData.sNode.asAssocNodes[u8NodeInd].u8LastLQI = 0;
+                sCoordData.sNode.asAssocNodes[u8NodeInd].u8LastLQI = 0;			
+				sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u8Temp = 0;			
+				sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u8Humidity = 0;
                 FtTML_ResetSeq(u16ShortAddress);
                 led_toggle(LED0);
                 break;
@@ -588,7 +595,9 @@ PRIVATE void vHandleNodeAssociation(MAC_MlmeDcfmInd_s *psMlmeInd)
             sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u32ExtAddrHi = psMlmeInd->uParam.sIndAssociate.sDeviceAddr.u32H;
             sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u16RecvCnt = 0;
             sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u8Power = 0;
-            sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u8LastLQI = 0;
+            sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u8LastLQI = 0;			
+            sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u8Temp = 0;			
+            sCoordData.sNode.asAssocNodes[sCoordData.sNode.u8AssociatedNodes].u8Humidity = 0;
             sCoordData.sNode.u8AssociatedNodes++;
 
 
@@ -825,10 +834,25 @@ PRIVATE void vDrawUI(void)
 
         Num2Str(aTmpData,0x0000 | sCoordData.sNode.asAssocNodes[ind].u8Power);
         vSerial_TxString(aTmpData);
-         vSerial_TxString("\t");
+        vSerial_TxString("\t");
 
         Num2Str(aTmpData,0x0000 | sCoordData.sNode.asAssocNodes[ind].u8LastLQI);
         vSerial_TxString(aTmpData);
+		vSerial_TxString("\t");
+		
+		//Temp
+		Num2Str(aTmpData,0x0000 | sCoordData.sNode.asAssocNodes[ind].u8Temp);
+        vSerial_TxString(aTmpData);
+		vSerial_TxString("\t");
+		
+		//Humidity
+		Num2Str(aTmpData,0x0000 | sCoordData.sNode.asAssocNodes[ind].u8Humidity);
+        vSerial_TxString(aTmpData);
+		vSerial_TxString("\t");
+		
+		//Distance
+		/*Num2Str(aTmpData,0x0000 | sCoordData.sNode.asAssocNodes[ind].aChar);
+        vSerial_TxString(aTmpData);*/
         vSerial_TxString("\r\n");
         vUART_TxCharISR();
     }

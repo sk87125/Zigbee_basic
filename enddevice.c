@@ -56,6 +56,7 @@
 #include <FontalButton.h>
 #include <FontalLED.h>
 #include "Fttml-lite.h"
+#include <HtsDriver.h>
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
 /****************************************************************************/
@@ -107,6 +108,7 @@ PRIVATE void *pvMac;
 PRIVATE MAC_Pib_s *psPib;
 
 uint8 gu8PowerLevel = 0;
+uint8 bFlag;//ziyi
 int gdPower[] = {0x00,0x3a,0x34,0x2e,0x28,0x22}; //{16,10,4,-2,-8,-12};
 
 /****************************************************************************/
@@ -128,6 +130,8 @@ PRIVATE void vHandleAssociateResponse(MAC_MlmeDcfmInd_s *psMlmeInd);
 PRIVATE void vWUART_TxData(void);
 PRIVATE void vTickTimerISR(uint32 u32Device, uint32 u32ItemBitmap);
 
+PUBLIC void vUartPrint(uint8 u8UartPort, char * pString);
+PUBLIC void Num2Str(char *pcString, uint16 u16Data);
 /****************************************************************************
  *
  * NAME: AppColdStart
@@ -145,6 +149,7 @@ PRIVATE void vTickTimerISR(uint32 u32Device, uint32 u32ItemBitmap);
  ****************************************************************************/
 PUBLIC void AppColdStart(void)
 {
+	bFlag = FALSE;//ziyi
     vWUART_Init();
 
     vStartActiveScan();
@@ -233,6 +238,12 @@ PRIVATE void vWUART_Init(void)
     vAHI_TickTimerInterval(TICKER_PERIOD/4);  // 1/4s
     vAHI_TickTimerConfigure(E_AHI_TICK_TIMER_RESTART);
     vAHI_TickTimerIntEnable(TRUE);
+	//********************************************************
+	vHTSreset();
+	while (1)
+	{
+
+	}
 
 
 }
@@ -436,9 +447,36 @@ PRIVATE void vProcessIncomingHwEvent(AppQApiHwInd_s *psAHI_Ind)
  ****************************************************************************/
 PRIVATE void vTickTimerISR(uint32 u32Device, uint32 u32ItemBitmap)
 {
+	uint16 u8Temp = 0;
+    uint16 u8Humidity = 0;
+    char aChar[5];
 
     if ((sDeviceData.sSystem.eState == E_STATE_RUNNING) )
     {
+		//Read data
+		while(bFlag<3){
+			if (bFlag== 0)
+			vHTSstartReadTemp();
+			else if (bFlag== 1)	{
+			u8Temp =  u16HTSreadTempResult();
+			Num2Str( aChar,u8Temp);
+			vUartPrint(0,"Temp ");
+			vUartPrint(0,aChar);
+			vUartPrint(0,"\t\t");
+			}
+			else if (bFlag == 2)
+			vHTSstartReadHumidity();
+			else if (bFlag== 3){
+			u8Humidity =  u16HTSreadHumidityResult();
+			Num2Str( aChar,u8Humidity);
+			vUartPrint(0,"Humidity ");
+			vUartPrint(0,aChar);
+			vUartPrint(0,"\r");
+			}
+			bFlag++;
+		}
+		bFlag = 0;
+
         // send data
         if (btn_pressed(BUTTON1))
             vWUART_TxData();
@@ -679,7 +717,34 @@ PRIVATE void vWUART_TxData(void)
         vAppApiMcpsRequest(&sMcpsReqRsp, &sMcpsSyncCfm);
     }
 }
+PUBLIC void Num2Str(char *pcString, uint16 u16Data)
+{
+    	//char numList[] = "0123456789";
+	int8 u8Ind = 4;
 
+//	for (u8I = 4; u8I >=0; u8I--)
+	do{
+		//if (u16Data%10 == 0)
+		//	*(pcString+i) = 0x30;
+		//else
+		pcString[u8Ind]= 0x30 +(u16Data%10);
+		u16Data /=10;
+		u8Ind--;
+	}
+	while (u8Ind>=0);
+	pcString[5] = 0;
+//	uartio_print(pcString);
+}
+// print string to UART function.........
+PUBLIC void vUartPrint(uint8 u8UartPort, char * pString)
+{
+    while (*pString)
+     {
+         while ((u8AHI_UartReadLineStatus(u8UartPort) & 0x20) == 0);
+         vAHI_UartWriteData(0, *pString);
+         pString++;
+     }
+}
 /****************************************************************************/
 /***        END OF FILE                                                   ***/
 /****************************************************************************/
